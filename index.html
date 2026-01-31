@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculatrice Djéhoutyenne – Multi-Anneaux & Compilation Cyclique</title>
+<style>
+body { font-family: Arial, sans-serif; background:#0b1020; color:#e5e7eb; text-align:center; padding: 10px; margin: 0; }
+h1 { color:#38bdf8; margin-bottom: 5px; font-size: 2.2rem; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+h2 { color:#22c55e; margin-top: 0; font-weight: bold; margin-bottom: 8px; font-size: 1.4rem; }
+.header-info { font-size: 13px; color: #94a3b8; margin-bottom: 15px; line-height: 1.5; }
+.principe { margin: 15px auto; font-style: italic; color: #cbd5e1; max-width: 800px; font-size: 15px; padding: 0 10px; }
+
+.container { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin-top:10px;}
+canvas { background:#020617; border:1px solid #38bdf8; border-radius:50%; max-width: 95%; height: auto; display: block; margin: 0 auto; }
+
+.controls { 
+    margin: 20px auto; 
+    background: #111827; 
+    padding: 15px; 
+    border-radius: 15px; 
+    border: 1px solid #1e293b; 
+    width: 90%; 
+    max-width: 730px; 
+    display: block; 
+    box-sizing: border-box;
+}
+.control-group { display: inline-block; white-space: nowrap; margin: 5px; }
+
+input, select { padding:6px; font-size:14px; background: #ffffff; color: #020617; border: 1px solid #38bdf8; border-radius: 8px; vertical-align: middle; }
+button { cursor: pointer; background: #38bdf8; color: #020617; font-weight: bold; text-transform: uppercase; border-radius: 8px; border: none; padding: 10px 14px; margin: 5px; width: auto; }
+button.clear { background:#7c2d12; color:#fff; }
+
+.log { width: 90%; max-width: 730px; margin: 20px auto; background:#020617; padding:15px; border: 1px solid #38bdf8; height:180px; overflow-y: auto; text-align:left; font-family: monospace; border-radius: 12px; font-size: 12px; line-height: 1.5; box-sizing: border-box; }
+.footer { font-size: 12px; color:#94a3b8; margin-top:40px; line-height: 1.8; padding-bottom: 30px; border-top: 1px solid #1e293b; padding-top: 20px; }
+
+@media (max-width: 480px) {
+    button { width: 95%; }
+}
+</style>
+</head>
+<body>
+
+<h1>Ordinateur Djéhoutyen® Cyclique Non-Binaire</h1>
+<h2>Calculatrice Djéhoutyenne – Multi-Anneaux & Compilation Cyclique</h2>
+<div class="header-info">
+    Calculatrice Djehoutyenne © 2026<br> Inventée par Dodji Mahouignito Djehouty OLOU<br>
+    Ordinateur Djéhoutyen® – marque protégée INPI
+</div>
+
+<p class="principe"><b>Principe :</b> Le calcul est compilé en déplacements cycliques exécutés sur plusieurs anneaux (mémoire + calcul).</p>
+
+<div class="container">
+  <div><h3>Anneau A<br>(Valeur)</h3><canvas id="ringA" width="220" height="220"></canvas></div>
+  <div><h3>Anneau B<br>(Instruction)</h3><canvas id="ringB" width="220" height="220"></canvas></div>
+  <div><h3>Anneau C<br>(Résultat)</h3><canvas id="ringC" width="220" height="220"></canvas></div>
+</div>
+
+<div class="controls">
+  <span class="control-group">États (N) : <input type="number" id="N" value="24" min="2" max="128" style="width:45px;"></span>
+  <span class="control-group">Valeur 1 : <input type="number" id="a" value="5" style="width:50px;"></span>
+  <span class="control-group">Opération : 
+    <select id="op">
+      <option value="+">+</option><option value="-">−</option><option value="*">×</option>
+      <option value="/">÷</option><option value="sqrt">√</option><option value="pow">^</option>
+    </select>
+  </span>
+  <span class="control-group">Valeur 2 : <input type="number" id="b" value="3" style="width:50px;"></span>
+  <br><br>
+  <button onclick="compileRun()">Compiler & Exécuter</button>
+  <button onclick="exportLog()">Exporter la trace</button>
+  <button class="clear" onclick="clearLog()">Effacer la trace</button>
+</div>
+
+<div id="log" class="log"></div>
+
+<div class="footer">
+    Ce logiciel illustre un paradigme de calcul par déplacement géométrique.<br>
+    Licence : © 2026 Dodji Mahouignito Djehouty OLOU – Gratuit pour usage personnel et pédagogique, revente interdite.
+</div>
+
+<script>
+function drawRing(canvasId, pos, N, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const r = canvas.width / 2 - 15;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < N; i++) {
+    const ang = (2 * Math.PI * i) / N - Math.PI / 2;
+    ctx.beginPath(); ctx.arc(cx + r * Math.cos(ang), cy + r * Math.sin(ang), 4, 0, 2 * Math.PI);
+    ctx.fillStyle = "#475569"; ctx.fill();
+  }
+  const a = (2 * Math.PI * (pos % N)) / N - Math.PI / 2;
+  ctx.beginPath(); ctx.arc(cx + r * Math.cos(a), cy + r * Math.sin(a), 10, 0, 2 * Math.PI);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+}
+
+function compute(a, b, op) {
+  if (op === "+") return a + b;
+  if (op === "-" || op == "−") return a - b;
+  if (op === "*") return a * b;
+  if (op === "/") return b !== 0 ? a / b : 0;
+  if (op === "sqrt") return Math.sqrt(a);
+  if (op === "pow") return Math.pow(a, b);
+  return 0;
+}
+
+function compileRun() {
+  const nEl = document.getElementById("N"), aEl = document.getElementById("a"), bEl = document.getElementById("b"), opEl = document.getElementById("op");
+  if(!nEl || !aEl || !bEl || !opEl) return;
+  const N = parseInt(nEl.value) || 24, a = parseFloat(aEl.value) || 0, b = parseFloat(bEl.value) || 0, op = opEl.value;
+  const result = compute(a, b, op), k = result - a;
+
+  drawRing("ringA", a, N, "#38bdf8");     
+  drawRing("ringB", k, N, "#22c55e");     
+  drawRing("ringC", result, N, "#f59e0b"); 
+
+  const logDiv = document.getElementById("log");
+  if (logDiv) {
+    logDiv.innerHTML += `Compilation cyclique :<br>Valeur 1 = ${a}<br>Valeur 2 = ${b}<br>Opération = ${a} ${op} ${b}<br>Déplacement compilé = ${k.toFixed(2)}<br>Résultat = ${result.toFixed(2)}<br><br>`;
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+}
+
+function clearLog() { document.getElementById("log").innerHTML = ""; }
+
+function exportLog() {
+  const log = document.getElementById("log");
+  if(!log) return;
+  const blob = new Blob([log.innerText], {type: "text/plain"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "trace_calcul_djehoutyen.txt";
+  link.click();
+}
+
+document.addEventListener('keypress', function (e) { if (e.key === 'Enter') compileRun(); });
+
+window.onload = function() { 
+    // On vide avant de lancer la sécurité pour éviter les doublons
+    clearLog();
+    setTimeout(() => { 
+        clearLog(); 
+        compileRun(); 
+    }, 400); 
+};
+</script>
+</body>
+</html>
